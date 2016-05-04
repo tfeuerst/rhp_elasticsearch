@@ -1,0 +1,16 @@
+{
+	"name": "rhp/elasticsearch",
+	"type": "typo3-cms-extension",
+	"description": "Rheinpfalz Elasticsearch Dummy",
+	"homepage": "https://typo3.org",
+	"license": ["GPL-2.0+"],
+
+	"require": {
+		"typo3/cms-core": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"Rhp\\Elasticsearch\\": "Classes/"
+		}
+	}
+}

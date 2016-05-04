@@ -1,0 +1,22 @@
+<form action="" method="get">
+	<input type="text" name="query" value="{query}" placeholder="Suchbegriff" />
+	<input type="submit" value="Suchen!">
+</form>
+
+<f:debug>{aggs}</f:debug>
+
+<f:for each="{results}" as="result">
+	<h3>{result.title}</h3>
+	<f:format.html><f:format.crop maxCharacters="200">{result.bodytext}</f:format.crop></f:format.html>
+	<p style="color: grey">
+		<f:for each="{result.categories}" as="category">{category.title}</f:for>
+	</p>
+</f:for>
+
+<f:if condition="{suggest.vorschlag.0.options}">
+	<p>Meinten Sie:
+	<f:for each="{suggest.vorschlag.0.options}" as="vorschlag">
+		<f:link.page pageUid="1" additionalParams="{query:vorschlag.text}">{vorschlag.text}</f:link.page>
+	</f:for>
+	</p>
+</f:if>
