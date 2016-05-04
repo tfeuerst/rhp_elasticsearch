@@ -43,13 +43,36 @@ class RhpSearch
     public function __construct()
     {
         $this->view = GeneralUtility::makeInstance(StandaloneView::class);
-        $this->view->setTemplatePathAndFilename(PATH_site . 'typo3conf/ext/rhp_elasticsearch/Resources/Private/Templates/Search.html');
+//
+        $this->view->setLayoutRootPaths([PATH_site . 'typo3conf/ext/rhp_elasticsearch/Resources/Private/Layouts']);
+        $this->view->setTemplateRootPaths([PATH_site . 'typo3conf/ext/rhp_elasticsearch/Resources/Private/Templates']);
+        $this->view->setPartialRootPaths([PATH_site . 'typo3conf/ext/rhp_elasticsearch/Resources/Private/Partials']);
+
     }
 
     public function main($content, $conf)
     {
-        $query = GeneralUtility::_GP('query');
         $this->connect($conf);
+        $action = 'list';
+        $actionParam = GeneralUtility::_GP('action');
+        if (!empty($actionParam)) {
+            $action = $actionParam;
+        }
+        // Set template
+        $this->view->setTemplatePathAndFilename(PATH_site . 'typo3conf/ext/rhp_elasticsearch/Resources/Private/Templates/'.ucfirst($action).'.html');
+        switch($action) {
+            case 'search':
+                $this->searchView();
+                break;
+            default:
+                $this->listView();
+        }
+        return $this->view->render();
+    }
+
+    protected function searchView()
+    {
+        $query = GeneralUtility::_GP('query');
         $queryArray = [
             'query' => [
                 'bool' => [
@@ -119,7 +142,62 @@ class RhpSearch
         $this->view->assign('suggest', $suggestResults->getSuggests());
 //        $this->view->assign('highlights', $resultSet->get)
         $this->view->assign('query', htmlspecialchars($query));
-        return $this->view->render();
+    }
+
+    protected function listView()
+    {
+        $hits = [];
+        $queryArray = [
+            'query' => [
+                'filtered' => [
+                    'query' => [
+                        'bool' => [
+                            'must' => [
+                                [
+                                    'terms' => [
+                                        'categories.title' => [
+                                            'Sport'
+                                        ]
+                                    ]
+                                ]
+                            ],
+                            'must_not' => [
+                                [
+                                    'terms' => [
+                                        'publish' => [
+                                            true
+                                        ]
+                                    ],
+                                ]
+                            ]
+                        ],
+                    ]
+
+                ]
+            ],
+            'size' => 7,
+            'sort' => [
+                'datetime' => [
+                    'order' => 'desc'
+                ],
+                'priority' => [
+                    'order' => 'desc'
+                ],
+                'id' => [
+                    'order' => 'desc'
+                ]
+            ]
+        ];
+        $search = $this->index->createSearch($queryArray);
+        $results = $search->search();
+        $result = $results->getResults();
+        $queryTime = $results->getTotalTime();
+        foreach ($result as $index => $item) {
+            $hits[] = $item->getData();
+        }
+        $this->view->assign('time', $queryTime);
+        $this->view->assign('list', $hits);
+
     }
 
     protected function connect($conf)
@@ -170,7 +248,7 @@ class RhpSearch
      *
      * @return string
      */
-    public function escape($value)
+    protected function escape($value)
     {
         //list taken from http://lucene.apache.org/java/docs/queryparsersyntax.html#Escaping%20Special%20Characters
         $pattern = '/(\+|-|&&|\|\||!|\(|\)|\{|}|\[|]|\^|"|~|\*|\?|:|\\\)/';
